@@ -1,0 +1,168 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Générateur de Planning 12/36</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f4f7fa;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        form {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 0 auto 30px auto;
+        }
+        label {
+            display: block;
+            margin-top: 15px;
+            font-weight: 600;
+        }
+        input[type="text"], input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        button {
+            margin-top: 20px;
+            padding: 12px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        .weekend td {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Générateur de Planning 12/36</h1>
+    <form id="planningForm">
+        <label for="startDate">Date de début :</label>
+        <input type="date" id="startDate" required>
+        <label for="endDate">Date de fin :</label>
+        <input type="date" id="endDate" required>
+        <label for="equipe1">Équipe 1 (ex: A,B):</label>
+        <input type="text" id="equipe1" required>
+        <label for="equipe2">Équipe 2 (ex: C,D):</label>
+        <input type="text" id="equipe2" required>
+        <label for="equipe3">Équipe 3 (ex: E,F):</label>
+        <input type="text" id="equipe3" required>
+        <label for="equipe4">Équipe 4 (ex: G,H):</label>
+        <input type="text" id="equipe4" required>
+        <button type="submit">Générer le planning</button>
+    </form>
+    <div style="text-align:center;">
+        <button onclick="exportPDF()">Exporter en PDF</button>
+    </div>
+    <div id="planningResult" style="margin-top:30px;"></div>
+
+    <script>
+        document.getElementById("planningForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            const startDate = new Date(document.getElementById("startDate").value);
+            const endDate = new Date(document.getElementById("endDate").value);
+            const equipes = [
+                document.getElementById("equipe1").value.split(","),
+                document.getElementById("equipe2").value.split(","),
+                document.getElementById("equipe3").value.split(","),
+                document.getElementById("equipe4").value.split(",")
+            ];
+
+            const resultDiv = document.getElementById("planningResult");
+            resultDiv.innerHTML = "";
+
+            const table = document.createElement("table");
+            const header = table.insertRow();
+            ["Date", "Garde du jour (08H00–20H00)", "Garde de nuit (20H00–08H00)"].forEach(text => {
+                const th = document.createElement("th");
+                th.textContent = text;
+                header.appendChild(th);
+            });
+
+            let currentDate = new Date(startDate);
+            let dayIndex = 0;
+
+            while (currentDate <= endDate) {
+                const row = table.insertRow();
+                const day = currentDate.getDay();
+                const isWeekend = (day === 0 || day === 6);
+                if (isWeekend) row.classList.add("weekend");
+
+                const jourEquipe = equipes[dayIndex % 4];
+                const nuitEquipe = equipes[(dayIndex + 1) % 4];
+
+                const dateCell = row.insertCell();
+                dateCell.textContent = currentDate.toLocaleDateString("fr-FR");
+
+                const jourCell = row.insertCell();
+                jourCell.textContent = jourEquipe.join(" + ");
+
+                const nuitCell = row.insertCell();
+                nuitCell.textContent = nuitEquipe.join(" + ");
+
+                currentDate.setDate(currentDate.getDate() + 1);
+                dayIndex++;
+            }
+
+            resultDiv.appendChild(table);
+        });
+
+        function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'pt', 'a4');
+            const elementHTML = document.getElementById('planningResult');
+            html2canvas(elementHTML).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const imgProps = doc.getImageProperties(imgData);
+                const pdfWidth = doc.internal.pageSize.getWidth();
+                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                doc.addImage(imgData, 'PNG', 0, 20, pdfWidth, pdfHeight);
+                doc.save("planning.pdf");
+            });
+        }
+    </script>
+</body>
+</html>
